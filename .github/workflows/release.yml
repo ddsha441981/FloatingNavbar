@@ -1,0 +1,228 @@
+name: Build and Release FloatingNavbar for Windows
+
+on:
+  push:
+    tags:
+      - 'v*'  # Triggers on version tags like v1.0.0
+
+jobs:
+  build_windows:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive  # Important for QHotkey and libfvad submodules
+
+    - name: Setup Qt 6
+      uses: jurplel/install-qt-action@v3
+      with:
+        version: '6.5.3'
+        host: 'windows'
+        target: 'desktop'
+        arch: 'win64_msvc2019_64'
+        modules: 'qtwebsockets qtmultimedia qtconcurrent'
+
+    - name: Setup MSVC
+      uses: ilammy/msvc-dev-cmd@v1
+      with:
+        arch: x64
+
+    - name: Install CMake
+      uses: jwlawson/actions-setup-cmake@v1
+      with:
+        cmake-version: '3.25.0'
+
+    - name: Configure CMake
+      run: |
+        cmake -S . -B build -G "Visual Studio 17 2022" -A x64 `
+          -DCMAKE_PREFIX_PATH="${env:Qt6_DIR}" `
+          -DCMAKE_BUILD_TYPE=Release
+
+    - name: Build Application
+      run: |
+        cmake --build build --config Release --target FloatingNavbar
+
+    - name: Deploy Qt Dependencies
+      run: |
+        & "${env:Qt6_DIR}/bin/windeployqt.exe" --release --no-translations `
+          --no-system-d3d-compiler --no-opengl-sw build/Release/FloatingNavbar.exe
+
+    - name: Create Release Directory Structure
+      run: |
+        New-Item -ItemType Directory -Force -Path "release"
+        New-Item -ItemType Directory -Force -Path "release/audioserver"
+        New-Item -ItemType Directory -Force -Path "release/audio-source"
+        New-Item -ItemType Directory -Force -Path "release/screen-capture" 
+        New-Item -ItemType Directory -Force -Path "release/configs"
+        New-Item -ItemType Directory -Force -Path "release/mytools/data"
+
+    - name: Copy Built Application
+      run: |
+        Copy-Item "build/Release/FloatingNavbar.exe" "release/"
+        Copy-Item "build/Release/*.dll" "release/" -ErrorAction SilentlyContinue
+
+    - name: Copy Supporting Binaries (if they exist)
+      run: |
+        if (Test-Path "audioserver/go-server-echomind.exe") {
+          Copy-Item "audioserver/go-server-echomind.exe" "release/audioserver/"
+        }
+        if (Test-Path "audio-source/capture_windows.exe") {
+          Copy-Item "audio-source/capture_windows.exe" "release/audio-source/"
+        }
+        if (Test-Path "screen-capture/entrypoint.bin") {
+          Copy-Item "screen-capture/entrypoint.bin" "release/screen-capture/"
+        }
+
+    - name: Create Default Configuration Files
+      run: |
+        # Create default wsocket.ini
+        @"
+        [WebSocket]
+        url=ws://localhost:8080/ws
+        "@ | Out-File -FilePath "release/configs/wsocket.ini" -Encoding utf8
+        
+        # Create sample config.txt
+        @"
+        API_KEY=your_groq_api_key_here
+        # Replace with your actual Groq API key
+        "@ | Out-File -FilePath "release/mytools/data/config.txt" -Encoding utf8
+        
+        # Create default prompt.txt
+        @"
+        From now on, you will act as JavamanBot, a senior Java Fullstack Developer giving job interview answers in Indian IT interviews.
+
+        Here are the guidelines for JavamanBot's responses:
+        * Use simple Indian English.
+        * Speak like a confident Indian candidate in a real interview room.
+        * All answers must be from a first-person point of view, using "I" and "we" naturally.
+        * Start technical answers with "Okay,".
+        * Use phrases like "According to my experience..." for scenario or real-world use.
+        * Use real-world Indian examples like Flipkart, Paytm.
+        * Do not use "you" or "your".
+
+        Only answer technical questions related to IT interviews.
+        "@ | Out-File -FilePath "release/mytools/data/prompt.txt" -Encoding utf8
+
+    - name: Create Installation README
+      run: |
+        @"
+        # FloatingNavbar Installation Guide
+
+        ## Quick Start
+        1. Extract all files to your preferred directory
+        2. Edit `mytools/data/config.txt` and add your Groq API key
+        3. Run `FloatingNavbar.exe`
+
+        ## Configuration
+        - **API Key**: Edit `mytools/data/config.txt`
+        - **WebSocket**: Modify `configs/wsocket.ini` if needed
+        - **Custom Prompts**: Edit `mytools/data/prompt.txt`
+
+        ## Usage
+        - Press `Ctrl+Alt+Shift+N` to show/hide the navbar
+        - Use the floating buttons to control different features
+        - Ensure microphone permissions are granted
+
+        ## System Requirements
+        - Windows 10/11 (64-bit)
+        - Internet connection for AI features
+        - Microphone access for audio capture
+
+        Developed by: Deendayal Kumawat
+        "@ | Out-File -FilePath "release/README.md" -Encoding utf8
+
+    - name: Create Release Archive
+      run: |
+        Compress-Archive -Path "release/*" -DestinationPath "FloatingNavbar-Windows-v$($env:GITHUB_REF -replace 'refs/tags/v', '').zip"
+
+    - name: Upload Build Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: FloatingNavbar-Windows-Release
+        path: |
+          release/
+          FloatingNavbar-Windows-v*.zip
+
+  create_release:
+    needs: build_windows
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Download Build Artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: FloatingNavbar-Windows-Release
+
+    - name: Get Version from Tag
+      id: get_version
+      run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: FloatingNavbar v${{ steps.get_version.outputs.VERSION }}
+        draft: false
+        prerelease: false
+        body: |
+          # FloatingNavbar v${{ steps.get_version.outputs.VERSION }} - Windows Release 🚀
+
+          **AI-Powered Interview Assistant for Technical Interviews**
+
+          ## 📦 What's Included
+          - **FloatingNavbar.exe** - Main application with Qt6 runtime
+          - **Supporting Binaries** - Audio capture, Go server, screenshot processor
+          - **Configuration Files** - Default settings and prompt templates
+          - **Installation Guide** - Complete setup instructions
+
+          ## ✨ Key Features
+          - 🎤 Real-time audio transcription with VAD
+          - 🤖 AI-powered question analysis (Groq API)
+          - 📸 Screenshot analysis and processing
+          - 🔗 Named pipe integration for overlays
+          - ⌨️ Global hotkey support (Ctrl+Alt+Shift+N)
+
+          ## 🔧 Quick Setup
+          1. Download and extract the zip file
+          2. Edit `mytools/data/config.txt` with your Groq API key
+          3. Run `FloatingNavbar.exe`
+
+          ## 🖥️ System Requirements
+          - Windows 10/11 (64-bit)
+          - 4GB RAM minimum, 8GB recommended
+          - Internet connection for AI features
+          - Microphone access for audio capture
+
+          ## 🆘 Support
+          Report issues on GitHub or check the README for detailed documentation.
+
+          ---
+          **Perfect for technical interview preparation in the Indian IT industry!**
+
+    - name: Upload Release ZIP
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./FloatingNavbar-Windows-v${{ steps.get_version.outputs.VERSION }}.zip
+        asset_name: FloatingNavbar-Windows-v${{ steps.get_version.outputs.VERSION }}.zip
+        asset_content_type: application/zip
+
+    - name: Upload Main Executable
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./release/FloatingNavbar.exe
+        asset_name: FloatingNavbar.exe
+        asset_content_type: application/octet-stream
