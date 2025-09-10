@@ -1,0 +1,20 @@
+download Qt 6.9 online inataller
+download minwg 13
+download cmake optional
+set env varible of minwG
+
+
+cd build
+cmake .. -G "MinGW Makefiles" -DQT_DEFAULT_MAJOR_VERSION=6 -DCMAKE_PREFIX_PATH="C:/Qt/6.9.1/mingw_64/lib/cmake"
+mingw32-make -j6
+
+//clean
+mingw32-make clean
+
+
+after build
+
+//run this command all dll files include after complete run exe
+"C:\Qt\6.9.1\mingw_64\bin\windeployqt.exe" FloatingNavbar.exe
+
+

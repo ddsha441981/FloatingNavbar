@@ -1,0 +1,13 @@
+/media/deendayal/personal/libfvad/build/CMakeFiles/edit_cache.dir
+/media/deendayal/personal/libfvad/build/CMakeFiles/rebuild_cache.dir
+/media/deendayal/personal/libfvad/build/CMakeFiles/list_install_components.dir
+/media/deendayal/personal/libfvad/build/CMakeFiles/install.dir
+/media/deendayal/personal/libfvad/build/CMakeFiles/install/local.dir
+/media/deendayal/personal/libfvad/build/CMakeFiles/install/strip.dir
+/media/deendayal/personal/libfvad/build/src/CMakeFiles/fvad.dir
+/media/deendayal/personal/libfvad/build/src/CMakeFiles/edit_cache.dir
+/media/deendayal/personal/libfvad/build/src/CMakeFiles/rebuild_cache.dir
+/media/deendayal/personal/libfvad/build/src/CMakeFiles/list_install_components.dir
+/media/deendayal/personal/libfvad/build/src/CMakeFiles/install.dir
+/media/deendayal/personal/libfvad/build/src/CMakeFiles/install/local.dir
+/media/deendayal/personal/libfvad/build/src/CMakeFiles/install/strip.dir

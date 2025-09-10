@@ -1,0 +1,8 @@
+{
+	"InstallScripts" : 
+	[
+		"D:/FloatingNavbar/build/cmake_install.cmake",
+		"D:/FloatingNavbar/build/external/QHotkey/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

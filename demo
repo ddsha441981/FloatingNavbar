@@ -1,0 +1,47 @@
+QObject::connect(pipeServer, &PipeServer::commandWithWorker, this,[this](const QString &cmd, PipeWorker* worker) {
+        qDebug() << "Received command from overlay:" << cmd;
+
+        if (cmd == "Ask/Help") {
+            pendingAskHelpWorker = worker;
+            sendRestApi(bufferedTranscript);  // responds later
+        } else if (cmd == "Prompt") {
+            togglePromptWindow();
+            worker->sendResponse("STATUS::Prompt processing.");
+        } else if (cmd == "Transcript") {
+            qDebug() << "✅ Transcript command received from overlay";
+            toggleTranscriptView();
+            transcriptStreamingWorker = worker;
+            //worker->sendResponse("STATUS::Transcript started.");
+            worker->sendStreamingData("[Transcript stream initialized]\n");
+        } else if (cmd == "Capture") {
+            captureScreen();
+            worker->sendResponse("STATUS::Screen captured.");
+        } else if (cmd == "Show/Hide") {
+            if (this->isVisible()) {
+                safeHide(this);
+                safeHide(transcriptionView);
+                safeHide(screenshotResponseView);
+                safeHide(messagePopup);
+                safeHide(promptWindow);
+                worker->sendResponse("STATUS::Navbar hidden.");
+            } else {
+                safeShow(this);
+                worker->sendResponse("STATUS::Navbar shown.");
+            }
+        } else if (cmd == "Start/Stop") {
+            QPushButton* toggleBtn = findChild<QPushButton*>("Start Listening");
+            if (!isListening) {
+                launchAudioCapture();
+                isListening = true;
+                if (toggleBtn) toggleBtn->setText("Stop Listening");
+                worker->sendResponse("STATUS::Listening started.");
+            } else {
+                stopAudioCapture();
+                isListening = false;
+                if (toggleBtn) toggleBtn->setText("Start Listening");
+                worker->sendResponse("STATUS::Listening stopped.");
+            }
+        } else {
+            worker->sendResponse("Unknown command: " + cmd);
+        }
+    });

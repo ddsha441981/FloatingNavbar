@@ -1,0 +1,2 @@
+C:\mingw64\bin\ar.exe qc libqhotkey.a CMakeFiles/qhotkey.dir/qhotkey_autogen/mocs_compilation.cpp.obj CMakeFiles/qhotkey.dir/QHotkey/qhotkey.cpp.obj CMakeFiles/qhotkey.dir/QHotkey/qhotkey_win.cpp.obj
+C:\mingw64\bin\ranlib.exe libqhotkey.a
